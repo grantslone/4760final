@@ -63,7 +63,7 @@ class ft(Thread):
 			ID = random.choice(string.ascii_letters + string.digits)
 			while ( ID in client_recv_list ):
 				ID = random.choice(string.ascii_letters + string.digits)
-			
+			self.sock.send(ID.encode())
 			# Add receiver entry to dictionary
                         # This adds the IP and the port to the dictionary
 			client_recv_list[ID] = self.addr
