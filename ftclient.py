@@ -9,9 +9,6 @@ import binascii
 import struct
 
 mode = None
-SERVER_HOST = '0.0.0.0'
-SERVER_PORT = 47722
-SERVER_ADDR = (SERVER_HOST, SERVER_PORT)
 
 
 class ft(Thread):
@@ -97,14 +94,18 @@ class ft(Thread):
 		print("Transfer Complete!")
 
 def init_to_server(mode, address, ID):
-	SERVER_HOST = address
-	SERVER_PORT = 47722
+	
+	# Split the HOST:PORT string
+	addr_port = address.split(':')
+	
+	SERVER_HOST = addr_port[0]
+	SERVER_PORT = int(addr_port[1])
 	SERVER_ADDR = (SERVER_HOST, SERVER_PORT)
 
 	### Sending and recieving byte strings
 	connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	connection.connect(SERVER_ADDR)
-	print("Asking \'" + address + ":47722\' about an ID...")
+	print("Asking \'" + addr_port[0] + ":" + addr_port[1] + " about an ID...")
 
 	if mode == 0:
 		connection.send(b'0')
@@ -120,9 +121,12 @@ def init_to_server(mode, address, ID):
 	return recv_addr
 
 def run_client(receiver, filename):
+	
+	# Split the HOST:PORT string
+	addr_port = address.split(':')
 
 	connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	recv_client = (receiver[0], 47722)
+	recv_client = (receiver[0], int(receiver[1]))
 	connection.connect(recv_client)
 
 	sendFile = open(filename, "rb")
@@ -147,8 +151,11 @@ def run_client(receiver, filename):
 	    totalsent = totalsent + sent
 
 
-def run_recv():
-	global SERVER_ADDR
+def run_recv(port):
+	
+	SERVER_HOST = '0.0.0.0'
+	SERVER_PORT = int(port)
+	SERVER_ADDR = (SERVER_HOST, SERVER_PORT)
 
 	connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	connection.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -164,10 +171,10 @@ def run_recv():
 ######################
 
 parser = argparse.ArgumentParser()
-# Stores HOST:PORT
+# Stores HOST:PORT in string
 parser.add_argument('--server', action='store')
 
-# Indicates server
+# Indicates receiving client
 parser.add_argument('--receive', action='store_true')
 
 # Indicates client and takes in ID FILE
@@ -189,7 +196,7 @@ address = args.server
 if args.receive:
 	mode = 0
 	init_to_server(mode, address, None)
-	run_recv()
+	run_recv(args.p)
 else:
 	mode = 1
 	recv_addr = init_to_server(mode, address, args.send[0])
