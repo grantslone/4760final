@@ -1,25 +1,29 @@
 Grant Slone
 811414084
-HW04
+
+Sebastien Nazaire
+** Insert 811 number here **
+
+# PJ03
 
 This is a text file transfer protocol that uses a
 client-server and client-client connection.
 
 To use this software, start the server:
 ```
-$ python3 ftserver.py
+$ python3 ftserver.py [--port PORT]
 ```
 
 and then start the receiver:
 ```
-$ python3 ftclient.py --server SERVERIP --receive
+$ python3 ftclient.py --server HOST:PORT [-s SIZE] [-p PORT] --receive 
 ```
 
 This will contact the server and the server will register
 the IP of the receiver. It will also print the identifier (0-9/a-x/A-x)
 which is a single character. To send the text file, run the client:
 ```
-$ python3 ftclient.py --server SERVERIP --send ID_CHARACTER TEXT_FILE.txt
+$ python3 ftclient.py --server HOST:PORT [-c CNUM] [-s SIZE] --send ID FILE 
 ```
 
 The sending client will terminate when finished. The receiver will not, and 
