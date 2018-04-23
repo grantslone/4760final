@@ -12,6 +12,7 @@ import textwrap
 mode = None
 
 
+
 class ft(Thread):
 	"""
 	This class is used as a Threading object to support concurrency.
@@ -107,11 +108,13 @@ def init_to_server(mode, address, ID):
   connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   connection.connect(SERVER_ADDR)
   print("Asking \'" + addr_port[0] + ":" + addr_port[1] + " about an ID...")
-  
+
   if mode == 0:
     connection.send(b'0')
+    ID = connection.recv(1).decode()
     print("Issued ID for identification...")
     recv_addr = None
+    print("ID: " + ID)
   else:
     connection.send(b'1')
     connection.send(b''+ ID.encode())
@@ -199,12 +202,12 @@ address = args.server
 
 if args.receive:
 	mode = 0
-	init_to_server(mode, address, None)
+	temp = init_to_server(mode, address, None)
 	run_recv(args.port, args.size)
 else:
-  mode = 1
-  recv_addr = init_to_server(mode, address, args.send[0])
-  receiver = recv_addr.decode("utf-8").split(',')
-  print(receiver)
-  print("Found client at \'" + receiver[0] + ":" + receiver[1] + "\'...")
-  run_client(receiver, args.send[1], args.cons, args.size)
+  	mode = 1
+	recv_addr = init_to_server(mode, address, args.send[0])
+	receiver = recv_addr.decode("utf-8").split(',')
+	print(receiver)
+	print("Found client at \'" + receiver[0] + ":" + receiver[1] + "\'...")
+	run_client(receiver, args.send[1], args.cons, args.size)
