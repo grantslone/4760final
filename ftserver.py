@@ -8,7 +8,7 @@ import os
 import string
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--port', action='store')
+parser.add_argument('--port', action='store', type=int, default=47694)
 args = parser.parse_args()
 
 SERVER_HOST = '0.0.0.0'
@@ -57,7 +57,7 @@ class ft(Thread):
 		# For this protocol, the initial connection sends a single bit denoting whether it's 
 		# a sender(1) or receiver(0)  
 		receiver_bit = self.sock.recv(1)
-		
+		 
 		# If it's a receiver, generate ID and add to dict
 		if receiver_bit == b'0':
 			ID = random.choice(string.ascii_letters + string.digits)
