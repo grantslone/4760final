@@ -7,9 +7,12 @@ import platform
 import os
 import string
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--port', action='store')
+args = parser.parse_args()
 
 SERVER_HOST = '0.0.0.0'
-SERVER_PORT = 47722
+SERVER_PORT = args.port
 SERVER_ADDR = (SERVER_HOST, SERVER_PORT)
 
 connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -61,7 +64,8 @@ class ft(Thread):
 			while ( ID in client_recv_list ):
 				ID = random.choice(string.ascii_letters + string.digits)
 			
-			# Add receiver entry to dictionary 
+			# Add receiver entry to dictionary
+                        # This adds the IP and the port to the dictionary
 			client_recv_list[ID] = self.addr
 		else:
 			# This is the sender requesting address for a specific ID
