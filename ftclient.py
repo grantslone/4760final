@@ -164,10 +164,23 @@ def run_recv():
 ######################
 
 parser = argparse.ArgumentParser()
+# Stores HOST:PORT
 parser.add_argument('--server', action='store')
+
+# Indicates server
 parser.add_argument('--receive', action='store_true')
+
+# Indicates client and takes in ID FILE
 parser.add_argument('--send', nargs = 2)
 
+# Indicates what the client's buffer size should be. 
+parser.add_argument('-s', '--size', action='store')
+
+# Indicates the port that this receiver client will use for it's socket
+parser.add_argument('-p','--port', action='store')
+
+# Specifies the number of parallel, concurrent connections to use when sending (default 1)
+parser.add_argument('-c', '--cons', default=1, action='store')
 args = parser.parse_args()
 
 address = args.server
