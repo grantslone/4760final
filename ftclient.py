@@ -120,7 +120,7 @@ def init_to_server(mode, address, ID):
 	connection.close()
 	return recv_addr
 
-def run_client(receiver, filename):
+def run_client(receiver, filename, cons, size):
 	
 	# Split the HOST:PORT string
 	addr_port = address.split(':')
@@ -151,7 +151,7 @@ def run_client(receiver, filename):
 	    totalsent = totalsent + sent
 
 
-def run_recv(port):
+def run_recv(port, size):
 	
 	SERVER_HOST = '0.0.0.0'
 	SERVER_PORT = int(port)
@@ -180,8 +180,8 @@ parser.add_argument('--receive', action='store_true')
 # Indicates client and takes in ID FILE
 parser.add_argument('--send', nargs = 2)
 
-# Indicates what the client's buffer size should be. 
-parser.add_argument('-s', '--size', action='store')
+# Indicates what the client's buffer size should be. (Default 4096) 
+parser.add_argument('-s', '--size', default=4096, action='store')
 
 # Indicates the port that this receiver client will use for it's socket
 parser.add_argument('-p','--port', action='store')
@@ -196,10 +196,10 @@ address = args.server
 if args.receive:
 	mode = 0
 	init_to_server(mode, address, None)
-	run_recv(args.p)
+	run_recv(args.p, args.s)
 else:
 	mode = 1
 	recv_addr = init_to_server(mode, address, args.send[0])
 	receiver = recv_addr.decode("utf-8").split(',')
 	print("Found client at \'" + receiver[0] + ":" + receiver[1] + "\'...")
-	run_client(receiver, args.send[1])
+	run_client(receiver, args.send[1], args.c, args.s)
