@@ -10,6 +10,7 @@ import struct
 import textwrap
 import heapq
 import time
+import itertools
 
 mode = None
 
@@ -20,7 +21,6 @@ pq = [] # list of entries arranged in a heap
 class ft(Thread):
 	"""
 	This class is used as a Threading object to support concurrency.
-
 	Keyword arguments:
 	Thread -- Thread object
 	"""
@@ -59,7 +59,6 @@ class ft(Thread):
 	def __init__(self, connection, fn, fs):
 		"""
 		initializer method for Thread
-
 		Keyword arguments:
 		self -- class object instance
 		client -- socket object for connection
@@ -74,7 +73,6 @@ class ft(Thread):
 	def recv_blocks(client):
 		"""
 		Used to receive file blocks from the sender and push them to the priority queue
-
 		This function should be threaded
 		"""
 		global args
@@ -97,10 +95,8 @@ class ft(Thread):
 		"""
 		The run, or 'start()' method for the ft class. This starts the Thread
 		instance so that the connection can run separately from the main logic.
-
 		This class is for the receiver so it may receive multiple files 
 		simultaneously.
-
 		Keyword arguments:
 		self -- class object reference
 		"""
@@ -131,12 +127,10 @@ class ft(Thread):
 def get_header(client):
 	"""
 	Gets the main header for the connection
-
 	returns the header name and total size of the file about to be
 	sent.
 	"""
 	data = client.recv(256)
-	
 	hex_data = binascii.hexlify(data)
 	spaced_hex = ''
 	utf_data = hex_data.decode("utf-8")
@@ -155,9 +149,9 @@ def get_header(client):
 		header_name += binascii.unhexlify(hex_name[x]).decode("ascii")
 	x += 4
 
-	return header_name, file_size
+	return header_name, header_size
 
-def init_to_server(mode, address, ID):
+def init_to_server(mode, address, ID, port):
 	
   # Split the HOST:PORT string
   addr_port = address.split(':')
@@ -175,8 +169,12 @@ def init_to_server(mode, address, ID):
     connection.send(b'0')
     ID = connection.recv(1).decode()
     print("Issued ID for identification...")
-    recv_addr = None
     print("ID: " + ID)
+    connection.send("CONFIRM".encode())
+    recv_addr = connection.recv(2048).decode()
+    recv_addr, temp = recv_addr.split(",")
+    recv_addr = recv_addr + ", " + str(port) + ")"
+    connection.send(recv_addr.encode())
   else:
     connection.send(b'1')
     connection.send(b''+ ID.encode())
@@ -191,23 +189,19 @@ def run_client(receiver, filename, cons, size):
   addr_port = address.split(':')
 
   connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  recv_client = (receiver[0], int(receiver[1]))
+  recv_client = (receiver[0][1:-1], int(receiver[1]))
   connection.connect(recv_client)
 
   sendFile = open(filename, "rb")
   temp = sendFile.read()
-  CNUM = 4
-  offset = (len(temp))/CNUM
-  tempsplit = textwrap.wrap(temp, offset)
-  print(tempsplit)
-  start = 0;
+  offset = int((len(temp))/cons)
+  parts = [temp[i:i+offset] for i in range(0, len(temp), offset)]
   
  
   print("Sending \'" + filename + "\'...")
   header_string = b''
   header_string += filename.encode()
   header_string += b'\x00'
-  start  = offset * i
   header_string += struct.pack("I", len(temp))
   header_string = header_string + temp
   
@@ -220,20 +214,19 @@ def run_client(receiver, filename, cons, size):
       totalsent = totalsent + sent
 
 
-def run_recv(port, size):
-	
-	SERVER_HOST = '0.0.0.0'
-	SERVER_PORT = int(port)
-	SERVER_ADDR = (SERVER_HOST, SERVER_PORT)
+def run_recv(address, size):
+  recvserv,recvport = temp.strip("(')").split(",")
+  SERVER_ADDR = (recvserv[:-1], int(recvport))
+  print(SERVER_ADDR)
 
-	connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	connection.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	connection.bind(SERVER_ADDR)
-	connection.listen(10)
-	while True:
-		client, address = connection.accept()
-		file_name, file_size = get_header(client)
-		ft(connection, file_name, file_size)
+  connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  connection.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+  connection.bind(SERVER_ADDR)
+  connection.listen(10)
+  while True:
+    client, address = connection.accept()
+    file_name, file_size = get_header(client)
+    ft(connection, file_name, file_size)
 
 
 ######################
@@ -265,12 +258,11 @@ address = args.server
 
 if args.receive:
 	mode = 0
-	temp = init_to_server(mode, address, None)
-	run_recv(args.port, args.size)
+	temp = init_to_server(mode, address, None, args.port)
+	run_recv(temp, args.size)
 else:
-  	mode = 1
-	recv_addr = init_to_server(mode, address, args.send[0])
-	receiver = recv_addr.decode("utf-8").split(',')
-	print(receiver)
-	print("Found client at \'" + receiver[0] + ":" + receiver[1] + "\'...")
-	run_client(receiver, args.send[1], args.cons, args.size)
+  mode = 1
+  recv_addr = init_to_server(mode, address, args.send[0], args.port)
+  receiver = recv_addr.decode("utf-8").split(',')
+  print("Found client at \'" + receiver[0] + ":" + str(int(receiver[1])) + "\'...")
+  run_client(receiver, args.send[1], args.cons, args.size)
