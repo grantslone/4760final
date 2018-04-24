@@ -8,8 +8,12 @@ import os
 import binascii
 import struct
 import textwrap
+import heapq
+import time
 
 mode = None
+
+pq = [] # list of entries arranged in a heap
 
 
 
@@ -20,6 +24,37 @@ class ft(Thread):
 	Keyword arguments:
 	Thread -- Thread object
 	"""
+		## Priority Queue addition
+	global pq
+	entry_finder = {}               # mapping of blocks to entries
+	REMOVED = '<removed-block>'     # placeholder for a removed block
+	counter = itertools.count()     # unique sequence count
+
+	def add_block(block, priority=0):
+	    'Add a new block or update the priority of an existing block'
+	    if block in entry_finder:
+	        remove_block(block)
+	    count = next(counter)
+	    entry = [priority, count, block]
+	    entry_finder[block] = entry
+	    heappush(pq, entry)
+
+	def remove_block(block):
+	    'Mark an existing block as REMOVED.  Raise KeyError if not found.'
+	    entry = entry_finder.pop(block)
+	    entry[-1] = REMOVED
+
+	def pop_block():
+	    'Remove and return the lowest priority block. Raise KeyError if empty.'
+	    while pq:
+	        priority, count, block = heappop(pq)
+	        if block is not REMOVED:
+	            del entry_finder[block]
+	            return block
+	    raise KeyError('pop from an empty priority queue')
+
+
+	##########################
 
 	def __init__(self, client, address):
 		"""
@@ -35,31 +70,17 @@ class ft(Thread):
 		self.addr = address
 		self.start()
 
-	def run(self):
+	def recv_blocks(client):
 		"""
-		The run, or 'start()' method for the ft class. This starts the Thread
-		instance so that the connection can run separately from the main logic.
+		Used to receive file blocks from the sender and push them to the priority queue
 
-		This class is for the receiver so it may receive multiple files 
-		simultaneously.
-
-		Keyword arguments:
-		self -- class object reference
+		This function should be threaded
 		"""
-		# Get header
+		global args
 
-
-		# data = self.sock.recv(1024)
-		
-		# total_received = len(data)
-		
-		# while total_received != 0:
-		# 	data += self.sock.recv(1024)
-		# 	total_received = len(data)
-		
 		chunks = []
 		while True:
-			chunk = self.sock.recv(2048)
+			chunk = client.recv(args.size)
 			if chunk == b'':
 				break
 			chunks.append(chunk)
@@ -83,6 +104,40 @@ class ft(Thread):
 		for x in range(0, len(hex_name)):
 			header_name += binascii.unhexlify(hex_name[x]).decode("ascii")
 		x += 4
+
+		# TODO: This should add the data to the priority queue without the header
+		add_block(data[x:], header.offset)
+
+
+	def run(self):
+		"""
+		The run, or 'start()' method for the ft class. This starts the Thread
+		instance so that the connection can run separately from the main logic.
+
+		This class is for the receiver so it may receive multiple files 
+		simultaneously.
+
+		Keyword arguments:
+		self -- class object reference
+		"""
+		# Get header
+
+
+		# data = self.sock.recv(1024)
+		
+		# total_received = len(data)
+		
+		# while total_received != 0:
+		# 	data += self.sock.recv(1024)
+		# 	total_received = len(data)
+
+		recv_threads = []
+
+		while True:
+			t = Thread(target=recv_blocks, args=(self.sock,))
+			t.start()
+			recv_threads.append(t)
+
 
 		print("Receiving \'" + header_name + "\'...")
 
