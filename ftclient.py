@@ -56,7 +56,7 @@ class ft(Thread):
 
 	##########################
 
-	def __init__(self, client, address):
+	def __init__(self, connection, fn, fs):
 		"""
 		initializer method for Thread
 
@@ -66,8 +66,9 @@ class ft(Thread):
 		address -- address bound to the 'client' socket
 		"""
 		Thread.__init__(self)
-		self.sock = client
-		self.addr = address
+		self.conn = connection
+		self.fn = fn
+		self.fs = fs
 		self.start()
 
 	def recv_blocks(client):
@@ -77,37 +78,20 @@ class ft(Thread):
 		This function should be threaded
 		"""
 		global args
+		global total_bytes_recvd
 
 		chunks = []
 		while True:
 			chunk = client.recv(args.size)
+			total_bytes_recvd += len(chunk)
 			if chunk == b'':
 				break
 			chunks.append(chunk)
 		data = b''.join(chunks)
-		
-		
-		hex_data = binascii.hexlify(data)
-		spaced_hex = ''
-		utf_data = hex_data.decode("utf-8")
-		spaced_hex = " ".join(utf_data[i:i+2] for i in range(0, len(utf_data), 2))
-		data_array = spaced_hex.split()
 
-		hex_name = []
-		header_name = ''
-		x = 0
-		while data_array[x] != "00":
-			hex_name.append(data_array[x])
-			x += 1
-		x += 1
-		header_size = int(data_array[x]+data_array[x+1]+data_array[x+2]+data_array[x+3], 16)
-		for x in range(0, len(hex_name)):
-			header_name += binascii.unhexlify(hex_name[x]).decode("ascii")
-		x += 4
+		block_offset = struct.unpack('I', data[0:4])[0]
 
-		# TODO: This should add the data to the priority queue without the header
-		add_block(data[x:], header.offset)
-
+		add_block(data[x:], block_offset)
 
 	def run(self):
 		"""
@@ -120,27 +104,19 @@ class ft(Thread):
 		Keyword arguments:
 		self -- class object reference
 		"""
-		# Get header
 
-
-		# data = self.sock.recv(1024)
+		print("Receiving \'" + self.fn + "\'...")
 		
-		# total_received = len(data)
+		total_bytes_recvd = 0
 		
-		# while total_received != 0:
-		# 	data += self.sock.recv(1024)
-		# 	total_received = len(data)
-
-		recv_threads = []
-
-		while True:
-			t = Thread(target=recv_blocks, args=(self.sock,))
+		while total_bytes_recvd != self.fs:
+			client, address = connection.accept()
+			t = Thread(target=recv_blocks, args=(client,))
 			t.start()
-			recv_threads.append(t)
 
 
-		print("Receiving \'" + header_name + "\'...")
 
+		# TODO: Write priority queue to file in correct order
 		newFile = open('./testing/'+header_name, "wb")
 		newFile.write(data[x:])
 		newFile.close()
@@ -149,6 +125,35 @@ class ft(Thread):
 		self.sock.shutdown(socket.SHUT_RDWR)
 		self.sock.close()
 		print("Transfer Complete!")
+
+def get_header(client):
+	"""
+	Gets the main header for the connection
+
+	returns the header name and total size of the file about to be
+	sent.
+	"""
+	data = client.recv(256)
+	
+	hex_data = binascii.hexlify(data)
+	spaced_hex = ''
+	utf_data = hex_data.decode("utf-8")
+	spaced_hex = " ".join(utf_data[i:i+2] for i in range(0, len(utf_data), 2))
+	data_array = spaced_hex.split()
+
+	hex_name = []
+	header_name = ''
+	x = 0
+	while data_array[x] != "00":
+		hex_name.append(data_array[x])
+		x += 1
+	x += 1
+	header_size = int(data_array[x]+data_array[x+1]+data_array[x+2]+data_array[x+3], 16)
+	for x in range(0, len(hex_name)):
+		header_name += binascii.unhexlify(hex_name[x]).decode("ascii")
+	x += 4
+
+	return header_name, file_size
 
 def init_to_server(mode, address, ID):
 	
@@ -225,7 +230,8 @@ def run_recv(port, size):
 	connection.listen(10)
 	while True:
 		client, address = connection.accept()
-		ft(client, address)
+		file_name, file_size = get_header(client)
+		ft(connection, file_name, file_size)
 
 
 ######################
