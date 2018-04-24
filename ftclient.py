@@ -114,12 +114,14 @@ class ft(Thread):
 			t = Thread(target=recv_blocks, args=(client,))
 			t.start()
 
-
-
-		# TODO: Write priority queue to file in correct order
-		newFile = open('./testing/'+header_name, "wb")
-		newFile.write(data[x:])
-		newFile.close()
+		newFile = open('./testing/'+self.fn, "wb")
+		while True:
+			try:
+				newFile.write(pop_block)
+			except:
+				break
+			finally:
+				newFile.close()
 
 		""" Completed. Shutdown socket"""
 		self.sock.shutdown(socket.SHUT_RDWR)
